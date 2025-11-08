@@ -28,7 +28,7 @@ doppler_secret() {
   local config="$2"
   local key="$3"
 
-  doppler secrets get "$key" --project "$project" --config "$config" --plain --no-file
+  doppler secrets get "$key" --project "$project" --config "$config" --plain
 }
 
 doppler_run() {
