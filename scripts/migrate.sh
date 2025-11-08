@@ -43,4 +43,4 @@ Commands:
 MSG
     exit 1
     ;;
-fi
+esac
