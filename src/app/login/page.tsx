@@ -1,5 +1,6 @@
+import Link from "next/link"
+
 import { signIn } from "@/lib/auth"
-import { redirect } from "next/navigation"
 
 export default function LoginPage() {
   async function handleLogin(formData: FormData) {
@@ -52,6 +53,13 @@ export default function LoginPage() {
         >
           Sign In
         </button>
+
+        <p className="text-center text-sm text-gray-600">
+          Don&apos;t have an account?{" "}
+          <Link href="/signup" className="font-medium text-blue-600 hover:underline">
+            Sign up
+          </Link>
+        </p>
       </form>
     </div>
   )
