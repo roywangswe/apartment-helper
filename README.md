@@ -7,10 +7,11 @@ Apartment Helper standardizes on the [Doppler CLI](https://docs.doppler.com/docs
 1. Install Node.js (version in `.nvmrc` if present, or the active LTS) and npm.
 2. Install the Doppler CLI: `brew install dopplerhq/cli/doppler` (macOS) or follow the [official install guide](https://docs.doppler.com/docs/install-cli) for your platform.
 3. Authenticate with Doppler using `doppler login` **or** export a long-lived service token in `DOPPLER_TOKEN`.
-4. Unless you override them, the helper scripts target the following scopes:
+4. The repository includes `.doppler/config.yaml` so the CLI automatically selects the `apartment-helper` project with the `dev` configuration.
+5. Unless you override them, the helper scripts target the following scopes:
    - `DOPPLER_PROJECT=apartment-helper`
    - `DOPPLER_CONFIG=dev` for local development and migrations.
-   - `DOPPLER_CONFIG=prd` for production builds.
+   - `DOPPLER_CONFIG=prd` for production builds (set `DOPPLER_CONFIG=prd` before running a script or call it with `doppler run --config prd`).
 
 Override these defaults by exporting the variables before running a script.
 
