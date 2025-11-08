@@ -9,7 +9,8 @@
     "lint": "eslint",
     "dev:doppler": "./scripts/start_dev.sh",
     "build:doppler": "./scripts/build.sh",
-    "migrate": "./scripts/migrate.sh"
+    "migrate": "./scripts/migrate.sh",
+    "prebuild": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",
