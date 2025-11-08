@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Apartment Helper
 
-## Getting Started
+Apartment Helper standardizes on the [Doppler CLI](https://docs.doppler.com/docs/install-cli) as the single source of truth for configuration and secrets across development, CI, and production. The scripts in this repository wrap our core workflows in `doppler run` so that every environment gets the same vetted configuration without storing credentials locally.
 
-First, run the development server:
+## Prerequisites
+
+1. Install Node.js (version in `.nvmrc` if present, or the active LTS) and npm.
+2. Install the Doppler CLI: `brew install dopplerhq/cli/doppler` (macOS) or follow the [official install guide](https://docs.doppler.com/docs/install-cli) for your platform.
+3. Authenticate with Doppler using `doppler login` **or** export a long-lived service token in `DOPPLER_TOKEN`.
+4. Unless you override them, the helper scripts target the following scopes:
+   - `DOPPLER_PROJECT=apartment-helper`
+   - `DOPPLER_CONFIG=dev` for local development and migrations.
+   - `DOPPLER_CONFIG=prd` for production builds.
+
+Override these defaults by exporting the variables before running a script.
+
+## Local Development
+
+Run the development server through Doppler:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev:doppler
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`scripts/start_dev.sh` verifies that Doppler is installed, confirms your authentication for the configured project/config, and falls back to Doppler-managed values for secrets such as `DATABASE_URL` and `NEXTAUTH_SECRET` when you do not provide local overrides. Finally, the script invokes `npm run dev` via `doppler run` so all application environment variables come from Doppler.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+To run the Next.js dev server without Doppler (for example in CI), you can still call `npm run dev`, but secrets will need to be provided manually.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Database Migrations
 
-## Learn More
+Use the Doppler-aware migration helper to keep Prisma in sync with the configured database:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# Apply production-ready migrations (default behaviour)
+npm run migrate
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Enter interactive dev workflow (prisma migrate dev)
+npm run migrate dev
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Show migration status
+npm run migrate status
+```
 
-## Deploy on Vercel
+`scripts/migrate.sh` compares your local overrides with Doppler. When `DATABASE_URL` is not set, it pulls the value from Doppler via `doppler secrets get` before running the Prisma command inside `doppler run`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Building for Release
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Production and CI builds should also execute within a Doppler-managed environment:
+
+```bash
+# Uses DOPPLER_CONFIG=prd by default
+npm run build:doppler
+```
+
+The build script checks your Doppler authentication and wraps `npm run build` in `doppler run --config prd`, ensuring build-time tokens (e.g. API keys) are never stored on disk or echoed into shell history. Override `DOPPLER_CONFIG` or `DOPPLER_PROJECT` to target a different scope.
+
+## Environment Variables
+
+All environment variables that the application consumes should be stored in Doppler. Developers can still override individual values locally (for example, by exporting `DATABASE_URL` before running a command). When an override is missing, the helper scripts query Doppler and inject the shared default automatically.
+
+## CI and Deployment
+
+Replicate the Doppler-first workflow in automation by calling the same helper scripts or, when a bespoke command is needed, wrapping it in `doppler run --project apartment-helper --config <env>`. This keeps your pipeline and production services aligned with local development without committing secrets to the repository.

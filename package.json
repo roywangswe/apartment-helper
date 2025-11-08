@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "dev:doppler": "./scripts/start_dev.sh",
+    "build:doppler": "./scripts/build.sh",
+    "migrate": "./scripts/migrate.sh"
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",
