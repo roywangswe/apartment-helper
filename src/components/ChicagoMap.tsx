@@ -10,102 +10,102 @@ import styles from "./ChicagoMap.module.css"
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ""
 
 const geojsonData = {
-  type: "FeatureCollection",
+  type: "FeatureCollection" as const,
   features: [
     // --- Nightclubs ---
     {
-      type: "Feature",
+      type: "Feature" as const,
       properties: {
         id: "nc1",
         name: "Nightclub A",
         category: "nightclub",
         description: "Dance floor & live DJs"
       },
-      geometry: { type: "Point", coordinates: [-87.6278, 41.8850] }
+      geometry: { type: "Point" as const, coordinates: [-87.6278, 41.8850] as [number, number] }
     },
     {
-      type: "Feature",
+      type: "Feature" as const,
       properties: {
         id: "nc2",
         name: "Nightclub B",
         category: "nightclub",
         description: "Late-night spot"
       },
-      geometry: { type: "Point", coordinates: [-87.6240, 41.8730] }
+      geometry: { type: "Point" as const, coordinates: [-87.6240, 41.8730] as [number, number] }
     },
     {
-      type: "Feature",
+      type: "Feature" as const,
       properties: {
         id: "nc3",
         name: "Nightclub C",
         category: "nightclub",
         description: "Cocktails + music"
       },
-      geometry: { type: "Point", coordinates: [-87.6340, 41.8780] }
+      geometry: { type: "Point" as const, coordinates: [-87.6340, 41.8780] as [number, number] }
     },
 
     // --- Squat-rack gyms ---
     {
-      type: "Feature",
+      type: "Feature" as const,
       properties: {
         id: "gym1",
         name: "Squat Rack Gym 1",
         category: "squat_gym",
         description: "Free weights, squat racks"
       },
-      geometry: { type: "Point", coordinates: [-87.6270, 41.8800] }
+      geometry: { type: "Point" as const, coordinates: [-87.6270, 41.8800] as [number, number] }
     },
     {
-      type: "Feature",
+      type: "Feature" as const,
       properties: {
         id: "gym2",
         name: "Squat Rack Gym 2",
         category: "squat_gym",
         description: "Powerlifting-friendly"
       },
-      geometry: { type: "Point", coordinates: [-87.6320, 41.8750] }
+      geometry: { type: "Point" as const, coordinates: [-87.6320, 41.8750] as [number, number] }
     },
     {
-      type: "Feature",
+      type: "Feature" as const,
       properties: {
         id: "gym3",
         name: "Squat Rack Gym 3",
         category: "squat_gym",
         description: "24/7 access"
       },
-      geometry: { type: "Point", coordinates: [-87.6200, 41.8820] }
+      geometry: { type: "Point" as const, coordinates: [-87.6200, 41.8820] as [number, number] }
     },
 
     // --- BJJ gyms ---
     {
-      type: "Feature",
+      type: "Feature" as const,
       properties: {
         id: "bjj1",
         name: "BJJ Dojo 1",
         category: "bjj",
         description: "Brazilian jiu-jitsu classes"
       },
-      geometry: { type: "Point", coordinates: [-87.6280, 41.8790] }
+      geometry: { type: "Point" as const, coordinates: [-87.6280, 41.8790] as [number, number] }
     },
     {
-      type: "Feature",
+      type: "Feature" as const,
       properties: {
         id: "bjj2",
         name: "BJJ Dojo 2",
         category: "bjj",
         description: "Gi & no-gi lessons"
       },
-      geometry: { type: "Point", coordinates: [-87.6350, 41.8810] }
+      geometry: { type: "Point" as const, coordinates: [-87.6350, 41.8810] as [number, number] }
     },
     {
-      type: "Feature",
+      type: "Feature" as const,
       properties: {
         id: "bjj3",
         name: "BJJ Dojo 3",
         category: "bjj",
         description: "Open mat nights"
       },
-      geometry: { type: "Point", coordinates: [-87.6220, 41.8740] }
+      geometry: { type: "Point" as const, coordinates: [-87.6220, 41.8740] as [number, number] }
     }
   ]
 }
@@ -231,13 +231,13 @@ export default function ChicagoMap() {
         const source = map.getSource("places") as mapboxgl.GeoJSONSource
         if (!source) return
         source.getClusterExpansionZoom(clusterId, (err, zoom) => {
-          if (err) return
+          if (err || zoom == null) return
           map.easeTo({ center: (features[0].geometry as any).coordinates, zoom })
         })
       })
 
       // show popup on unclustered point click (works for all three layers)
-      const showPopup = (e: mapboxgl.MapMouseEvent & mapboxgl.EventData) => {
+      const showPopup = (e: mapboxgl.MapMouseEvent) => {
         const features = map.queryRenderedFeatures(e.point, {
           layers: ["unclustered-nightclub", "unclustered-squat", "unclustered-bjj"]
         })
@@ -294,7 +294,7 @@ export default function ChicagoMap() {
     <div className={styles.wrapper}>
       <div className={styles.sidebar}>
         <h3>Downtown Chicago — Layers</h3>
-        <label>
+        <label className={styles.filterLabel}>
           <input
             type="checkbox"
             checked={visibleCategories.nightclubs}
@@ -302,7 +302,7 @@ export default function ChicagoMap() {
           />{" "}
           Nightclubs
         </label>
-        <label>
+        <label className={styles.filterLabel}>
           <input
             type="checkbox"
             checked={visibleCategories.squatGyms}
@@ -310,7 +310,7 @@ export default function ChicagoMap() {
           />{" "}
           Squat rack gyms
         </label>
-        <label>
+        <label className={styles.filterLabel}>
           <input
             type="checkbox"
             checked={visibleCategories.bjj}

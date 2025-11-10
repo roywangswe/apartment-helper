@@ -27,4 +27,7 @@
   border-radius: 2px;
   vertical-align: middle;
 }
-label { display: block; margin: 8px 0; }
+.filterLabel {
+  display: block;
+  margin: 8px 0;
+}
