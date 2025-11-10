@@ -1,6 +1,9 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
+import dynamic from "next/dynamic"
 import { DashboardHeader } from "@/components/dashboard-header"
+
+const ChicagoMap = dynamic(() => import("@/components/ChicagoMap"), { ssr: false })
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -30,6 +33,11 @@ export default async function DashboardPage() {
           <p className="mt-2 text-gray-600">
             Here's what's happening with your apartments today.
           </p>
+        </div>
+
+        {/* Map Section */}
+        <div className="mb-8">
+          <ChicagoMap />
         </div>
 
         {/* Stats Grid */}
