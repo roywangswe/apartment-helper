@@ -1,9 +1,16 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
+import { AuthError } from "next-auth"
 
 import { signIn } from "@/lib/auth"
+import { LoginForm } from "./login-form"
 
-export default function LoginPage() {
-  async function handleLogin(formData: FormData) {
+export default function LoginPage({
+  searchParams,
+}: {
+  searchParams: { error?: string }
+}) {
+  async function handleLogin(prevState: any, formData: FormData) {
     "use server"
 
     console.log("========================================")
@@ -17,15 +24,23 @@ export default function LoginPage() {
     console.log("Password present:", !!password)
     console.log("Password length:", password?.length)
 
+    if (!email || !password) {
+      console.log("ERROR: Missing email or password")
+      return {
+        error: "Please provide both email and password"
+      }
+    }
+
     console.log("Calling signIn()...")
 
     try {
-      const result = await signIn("credentials", {
+      await signIn("credentials", {
         email,
         password,
-        redirectTo: "/dashboard"
+        redirect: false,
       })
-      console.log("SignIn result:", result)
+
+      console.log("SignIn successful")
       console.log("========================================")
     } catch (error) {
       console.error("========================================")
@@ -33,58 +48,45 @@ export default function LoginPage() {
       console.error("========================================")
       console.error("Error type:", error?.constructor?.name)
       console.error("Error message:", error instanceof Error ? error.message : String(error))
-      console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace")
-      console.error("Full error:", error)
+
+      // Check if it's an AuthError (failed credentials)
+      if (error instanceof AuthError) {
+        console.error("AuthError type:", error.type)
+        console.error("========================================")
+        return {
+          error: "Invalid email or password"
+        }
+      }
+
+      console.error("Unexpected error:", error)
       console.error("========================================")
-      throw error
+      return {
+        error: "An unexpected error occurred. Please try again."
+      }
     }
+
+    // If we get here, login was successful - redirect to dashboard
+    redirect("/dashboard")
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <form action={handleLogin} className="w-full max-w-md space-y-4 p-8">
-        <h1 className="text-2xl font-bold">Login</h1>
-        
+    <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-md">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium">
-            Email
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            required
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-          />
+          <h1 className="text-center text-3xl font-bold tracking-tight text-gray-900">
+            Sign in to your account
+          </h1>
         </div>
 
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium">
-            Password
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-          />
-        </div>
-
-        <button
-          type="submit"
-          className="w-full rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-        >
-          Sign In
-        </button>
+        <LoginForm handleLogin={handleLogin} />
 
         <p className="text-center text-sm text-gray-600">
           Don&apos;t have an account?{" "}
-          <Link href="/signup" className="font-medium text-blue-600 hover:underline">
+          <Link href="/signup" className="font-medium text-blue-600 hover:text-blue-500">
             Sign up
           </Link>
         </p>
-      </form>
+      </div>
     </div>
   )
 }
