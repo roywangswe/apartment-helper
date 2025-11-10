@@ -5,15 +5,39 @@ import { signIn } from "@/lib/auth"
 export default function LoginPage() {
   async function handleLogin(formData: FormData) {
     "use server"
-    
+
+    console.log("========================================")
+    console.log("LOGIN PAGE - HANDLE LOGIN")
+    console.log("========================================")
+
     const email = formData.get("email") as string
     const password = formData.get("password") as string
 
-    await signIn("credentials", {
-      email,
-      password,
-      redirectTo: "/dashboard"
-    })
+    console.log("Email:", email)
+    console.log("Password present:", !!password)
+    console.log("Password length:", password?.length)
+
+    console.log("Calling signIn()...")
+
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirectTo: "/dashboard"
+      })
+      console.log("SignIn result:", result)
+      console.log("========================================")
+    } catch (error) {
+      console.error("========================================")
+      console.error("LOGIN PAGE - SIGNIN ERROR")
+      console.error("========================================")
+      console.error("Error type:", error?.constructor?.name)
+      console.error("Error message:", error instanceof Error ? error.message : String(error))
+      console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace")
+      console.error("Full error:", error)
+      console.error("========================================")
+      throw error
+    }
   }
 
   return (
