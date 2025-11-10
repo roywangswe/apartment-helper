@@ -1,9 +1,7 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
-import dynamic from "next/dynamic"
+import Link from "next/link"
 import { DashboardHeader } from "@/components/dashboard-header"
-
-const ChicagoMap = dynamic(() => import("@/components/ChicagoMap"), { ssr: false })
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -33,11 +31,6 @@ export default async function DashboardPage() {
           <p className="mt-2 text-gray-600">
             Here's what's happening with your apartments today.
           </p>
-        </div>
-
-        {/* Map Section */}
-        <div className="mb-8">
-          <ChicagoMap />
         </div>
 
         {/* Stats Grid */}
@@ -140,6 +133,28 @@ export default async function DashboardPage() {
           </div>
           <div className="px-6 py-5">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Link
+                href="/dashboard/map"
+                className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-6 text-center hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+              >
+                <svg
+                  className="h-8 w-8 text-gray-400 mb-2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth="1.5"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z"
+                  />
+                </svg>
+                <span className="text-sm font-medium text-gray-900">
+                  View Map
+                </span>
+              </Link>
+
               <button className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-6 text-center hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
                 <svg
                   className="h-8 w-8 text-gray-400 mb-2"
