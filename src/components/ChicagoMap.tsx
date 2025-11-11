@@ -92,55 +92,19 @@ export default function ChicagoMap() {
     map.on("load", () => {
       console.log("Map loaded, adding source and layers...")
 
-      // add source with clustering enabled
+      // add source without clustering
       map.addSource("places", {
         type: "geojson",
-        data: geojsonData,
-        cluster: true,
-        clusterMaxZoom: 14,
-        clusterRadius: 50 // pixels
+        data: geojsonData
       })
 
-      // cluster circles
-      map.addLayer({
-        id: "clusters",
-        type: "circle",
-        source: "places",
-        filter: ["has", "point_count"],
-        paint: {
-          "circle-color": [
-            "step",
-            ["get", "point_count"],
-            "#51bbd6",
-            5,
-            "#f1f075",
-            10,
-            "#f28cb1"
-          ],
-          "circle-radius": ["step", ["get", "point_count"], 15, 5, 20, 10, 25]
-        }
-      })
-
-      // cluster count label
-      map.addLayer({
-        id: "cluster-count",
-        type: "symbol",
-        source: "places",
-        filter: ["has", "point_count"],
-        layout: {
-          "text-field": "{point_count_abbreviated}",
-          "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
-          "text-size": 12
-        }
-      })
-
-      // unclustered points per category: nightclubs, squat_gym, bjj
+      // Individual points per category: nightclubs, squat_gym, bjj
       // Nightclubs: red
       map.addLayer({
-        id: "unclustered-nightclub",
+        id: "nightclub",
         type: "circle",
         source: "places",
-        filter: ["all", ["!=", ["get", "cluster"], true], ["==", ["get", "category"], "nightclub"]],
+        filter: ["==", ["get", "category"], "nightclub"],
         paint: {
           "circle-color": "#e63946",
           "circle-radius": 8,
@@ -151,10 +115,10 @@ export default function ChicagoMap() {
 
       // Squat gyms: green
       map.addLayer({
-        id: "unclustered-squat",
+        id: "squat",
         type: "circle",
         source: "places",
-        filter: ["all", ["!=", ["get", "cluster"], true], ["==", ["get", "category"], "squat_gym"]],
+        filter: ["==", ["get", "category"], "squat_gym"],
         paint: {
           "circle-color": "#2a9d8f",
           "circle-radius": 8,
@@ -165,10 +129,10 @@ export default function ChicagoMap() {
 
       // BJJ: purple
       map.addLayer({
-        id: "unclustered-bjj",
+        id: "bjj",
         type: "circle",
         source: "places",
-        filter: ["all", ["!=", ["get", "cluster"], true], ["==", ["get", "category"], "bjj"]],
+        filter: ["==", ["get", "category"], "bjj"],
         paint: {
           "circle-color": "#6a4c93",
           "circle-radius": 8,
@@ -177,23 +141,10 @@ export default function ChicagoMap() {
         }
       })
 
-      // click cluster to zoom
-      map.on("click", "clusters", (e) => {
-        const features = map.queryRenderedFeatures(e.point, { layers: ["clusters"] })
-        if (!features.length) return
-        const clusterId = features[0].properties?.cluster_id
-        const source = map.getSource("places") as mapboxgl.GeoJSONSource
-        if (!source) return
-        source.getClusterExpansionZoom(clusterId, (err, zoom) => {
-          if (err || zoom == null) return
-          map.easeTo({ center: (features[0].geometry as any).coordinates, zoom })
-        })
-      })
-
-      // show popup on unclustered point click (works for all three layers)
+      // show popup on point click (works for all three layers)
       const showPopup = (e: mapboxgl.MapMouseEvent) => {
         const features = map.queryRenderedFeatures(e.point, {
-          layers: ["unclustered-nightclub", "unclustered-squat", "unclustered-bjj"]
+          layers: ["nightclub", "squat", "bjj"]
         })
         if (!features.length) return
         const f = features[0]
@@ -206,9 +157,7 @@ export default function ChicagoMap() {
       map.on("click", showPopup)
 
       // change cursor on hover
-      map.on("mouseenter", "clusters", () => map.getCanvas().style.cursor = "pointer")
-      map.on("mouseleave", "clusters", () => map.getCanvas().style.cursor = "")
-      ;["unclustered-nightclub", "unclustered-squat", "unclustered-bjj"].forEach((layerId) => {
+      ;["nightclub", "squat", "bjj"].forEach((layerId) => {
         map.on("mouseenter", layerId, () => map.getCanvas().style.cursor = "pointer")
         map.on("mouseleave", layerId, () => map.getCanvas().style.cursor = "")
       })
@@ -228,17 +177,17 @@ export default function ChicagoMap() {
     if (!map || !mapLoaded) return
 
     map.setLayoutProperty(
-      "unclustered-nightclub",
+      "nightclub",
       "visibility",
       visibleCategories.nightclubs ? "visible" : "none"
     )
     map.setLayoutProperty(
-      "unclustered-squat",
+      "squat",
       "visibility",
       visibleCategories.squatGyms ? "visible" : "none"
     )
     map.setLayoutProperty(
-      "unclustered-bjj",
+      "bjj",
       "visibility",
       visibleCategories.bjj ? "visible" : "none"
     )
