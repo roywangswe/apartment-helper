@@ -9,116 +9,65 @@ import styles from "./ChicagoMap.module.css"
 // Make sure NEXT_PUBLIC_MAPBOX_TOKEN is set in env
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ""
 
-const geojsonData = {
-  type: "FeatureCollection" as const,
-  features: [
-    // --- Nightclubs ---
-    {
-      type: "Feature" as const,
-      properties: {
-        id: "nc1",
-        name: "Nightclub A",
-        category: "nightclub",
-        description: "Dance floor & live DJs"
-      },
-      geometry: { type: "Point" as const, coordinates: [-87.6278, 41.8850] as [number, number] }
-    },
-    {
-      type: "Feature" as const,
-      properties: {
-        id: "nc2",
-        name: "Nightclub B",
-        category: "nightclub",
-        description: "Late-night spot"
-      },
-      geometry: { type: "Point" as const, coordinates: [-87.6240, 41.8730] as [number, number] }
-    },
-    {
-      type: "Feature" as const,
-      properties: {
-        id: "nc3",
-        name: "Nightclub C",
-        category: "nightclub",
-        description: "Cocktails + music"
-      },
-      geometry: { type: "Point" as const, coordinates: [-87.6340, 41.8780] as [number, number] }
-    },
+interface GeoJSONFeature {
+  type: "Feature"
+  properties: {
+    id: string
+    name: string
+    category: string
+    description: string
+    [key: string]: any
+  }
+  geometry: {
+    type: "Point"
+    coordinates: [number, number]
+  }
+}
 
-    // --- Squat-rack gyms ---
-    {
-      type: "Feature" as const,
-      properties: {
-        id: "gym1",
-        name: "Squat Rack Gym 1",
-        category: "squat_gym",
-        description: "Free weights, squat racks"
-      },
-      geometry: { type: "Point" as const, coordinates: [-87.6270, 41.8800] as [number, number] }
-    },
-    {
-      type: "Feature" as const,
-      properties: {
-        id: "gym2",
-        name: "Squat Rack Gym 2",
-        category: "squat_gym",
-        description: "Powerlifting-friendly"
-      },
-      geometry: { type: "Point" as const, coordinates: [-87.6320, 41.8750] as [number, number] }
-    },
-    {
-      type: "Feature" as const,
-      properties: {
-        id: "gym3",
-        name: "Squat Rack Gym 3",
-        category: "squat_gym",
-        description: "24/7 access"
-      },
-      geometry: { type: "Point" as const, coordinates: [-87.6200, 41.8820] as [number, number] }
-    },
-
-    // --- BJJ gyms ---
-    {
-      type: "Feature" as const,
-      properties: {
-        id: "bjj1",
-        name: "BJJ Dojo 1",
-        category: "bjj",
-        description: "Brazilian jiu-jitsu classes"
-      },
-      geometry: { type: "Point" as const, coordinates: [-87.6280, 41.8790] as [number, number] }
-    },
-    {
-      type: "Feature" as const,
-      properties: {
-        id: "bjj2",
-        name: "BJJ Dojo 2",
-        category: "bjj",
-        description: "Gi & no-gi lessons"
-      },
-      geometry: { type: "Point" as const, coordinates: [-87.6350, 41.8810] as [number, number] }
-    },
-    {
-      type: "Feature" as const,
-      properties: {
-        id: "bjj3",
-        name: "BJJ Dojo 3",
-        category: "bjj",
-        description: "Open mat nights"
-      },
-      geometry: { type: "Point" as const, coordinates: [-87.6220, 41.8740] as [number, number] }
-    }
-  ]
+interface GeoJSONData {
+  type: "FeatureCollection"
+  features: GeoJSONFeature[]
 }
 
 export default function ChicagoMap() {
   const mapContainer = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [geojsonData, setGeojsonData] = useState<GeoJSONData | null>(null)
   const [visibleCategories, setVisibleCategories] = useState({
     nightclubs: true,
     squatGyms: true,
     bjj: true
   })
+
+  // Fetch POI data from API
+  useEffect(() => {
+    async function fetchPOIs() {
+      try {
+        setLoading(true)
+        setError(null)
+        console.log("Fetching POIs from API...")
+
+        const response = await fetch("/api/pois")
+        if (!response.ok) {
+          throw new Error(`Failed to fetch POIs: ${response.status}`)
+        }
+
+        const data: GeoJSONData = await response.json()
+        console.log(`Loaded ${data.features.length} POIs`)
+        setGeojsonData(data)
+      } catch (err) {
+        console.error("Error fetching POIs:", err)
+        setError(err instanceof Error ? err.message : "Failed to load places")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchPOIs()
+  }, [])
 
   useEffect(() => {
     if (!mapContainer.current) return
@@ -126,7 +75,10 @@ export default function ChicagoMap() {
       console.error("Mapbox token missing. Set NEXT_PUBLIC_MAPBOX_TOKEN.")
       return
     }
+    if (!geojsonData) return // wait for data
     if (mapRef.current) return // init once
+
+    console.log("Initializing map with data...")
 
     const map = new mapboxgl.Map({
       container: mapContainer.current,
@@ -138,6 +90,8 @@ export default function ChicagoMap() {
     mapRef.current = map
 
     map.on("load", () => {
+      console.log("Map loaded, adding source and layers...")
+
       // add source with clustering enabled
       map.addSource("places", {
         type: "geojson",
@@ -266,7 +220,7 @@ export default function ChicagoMap() {
       map.remove()
       mapRef.current = null
     }
-  }, [])
+  }, [geojsonData])
 
   // Toggle categories by setting layer visibility
   useEffect(() => {
@@ -290,17 +244,60 @@ export default function ChicagoMap() {
     )
   }, [visibleCategories, mapLoaded])
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className={styles.wrapper}>
+        <div className={styles.loadingContainer}>
+          <div className={styles.spinner}></div>
+          <p>Loading places from OpenStreetMap...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className={styles.wrapper}>
+        <div className={styles.errorContainer}>
+          <p className={styles.errorMessage}>Error: {error}</p>
+          <button
+            className={styles.retryButton}
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const stats = geojsonData ? {
+    nightclubs: geojsonData.features.filter(f => f.properties.category === "nightclub").length,
+    gyms: geojsonData.features.filter(f => f.properties.category === "squat_gym").length,
+    bjj: geojsonData.features.filter(f => f.properties.category === "bjj").length,
+    total: geojsonData.features.length
+  } : { nightclubs: 0, gyms: 0, bjj: 0, total: 0 }
+
   return (
     <div className={styles.wrapper}>
       <div className={styles.sidebar}>
         <h3>Downtown Chicago — Layers</h3>
+
+        <div className={styles.stats}>
+          <p className={styles.statsText}>
+            Showing {stats.total} places from OpenStreetMap
+          </p>
+        </div>
+
         <label className={styles.filterLabel}>
           <input
             type="checkbox"
             checked={visibleCategories.nightclubs}
             onChange={(e) => setVisibleCategories(s => ({ ...s, nightclubs: e.target.checked }))}
           />{" "}
-          Nightclubs
+          Nightclubs ({stats.nightclubs})
         </label>
         <label className={styles.filterLabel}>
           <input
@@ -308,7 +305,7 @@ export default function ChicagoMap() {
             checked={visibleCategories.squatGyms}
             onChange={(e) => setVisibleCategories(s => ({ ...s, squatGyms: e.target.checked }))}
           />{" "}
-          Squat rack gyms
+          Gyms & Fitness ({stats.gyms})
         </label>
         <label className={styles.filterLabel}>
           <input
@@ -316,18 +313,17 @@ export default function ChicagoMap() {
             checked={visibleCategories.bjj}
             onChange={(e) => setVisibleCategories(s => ({ ...s, bjj: e.target.checked }))}
           />{" "}
-          BJJ gyms
+          BJJ Academies ({stats.bjj})
         </label>
 
         <div className={styles.legend}>
           <div><span className={styles.legendSwatch} style={{background:"#e63946"}}/> Nightclub</div>
-          <div><span className={styles.legendSwatch} style={{background:"#2a9d8f"}}/> Squat Gym</div>
+          <div><span className={styles.legendSwatch} style={{background:"#2a9d8f"}}/> Gym/Fitness</div>
           <div><span className={styles.legendSwatch} style={{background:"#6a4c93"}}/> BJJ</div>
         </div>
 
-        <small>
-          Note: this is mock data for downtown Chicago. Replace `geojsonData.features` with your
-          real feed or API call.
+        <small className={styles.dataSource}>
+          Data source: OpenStreetMap contributors via Overpass API
         </small>
       </div>
 
