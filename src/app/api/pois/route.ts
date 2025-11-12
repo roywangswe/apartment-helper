@@ -51,8 +51,12 @@ export async function GET() {
         // BJJ academies
         node["sport"="brazilian_jiu_jitsu"](${bbox});
         way["sport"="brazilian_jiu_jitsu"](${bbox});
-        node["name"~"BJJ|jiu.?jitsu",i](${bbox});
-        way["name"~"BJJ|jiu.?jitsu",i](${bbox});
+        node["sport"="martial_arts"]["martial_arts"="brazilian_jiu_jitsu"](${bbox});
+        way["sport"="martial_arts"]["martial_arts"="brazilian_jiu_jitsu"](${bbox});
+        node["name"~"BJJ|jiu.?jitsu|gracie|grappling",i](${bbox});
+        way["name"~"BJJ|jiu.?jitsu|gracie|grappling",i](${bbox});
+        node["leisure"="sports_centre"]["sport"~"jiu.?jitsu",i](${bbox});
+        way["leisure"="sports_centre"]["sport"~"jiu.?jitsu",i](${bbox});
       );
       out center;
     `
@@ -91,7 +95,12 @@ export async function GET() {
         if (tags.amenity === "nightclub") {
           category = "nightclub"
           description = "Nightclub"
-        } else if (tags.sport === "brazilian_jiu_jitsu" || name.match(/bjj|jiu.?jitsu/i)) {
+        } else if (
+          tags.sport === "brazilian_jiu_jitsu" ||
+          tags.martial_arts === "brazilian_jiu_jitsu" ||
+          name.match(/bjj|jiu.?jitsu|gracie|grappling/i) ||
+          (tags.sport && tags.sport.match(/jiu.?jitsu/i))
+        ) {
           category = "bjj"
           description = "Brazilian Jiu-Jitsu Academy"
         } else if (tags.amenity === "gym" || tags.leisure === "fitness_centre") {
