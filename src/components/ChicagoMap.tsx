@@ -15,7 +15,12 @@ interface GeoJSONFeature {
     id: string
     name: string
     category: string
-    description: string
+    description?: string
+    price?: number
+    address?: string
+    neighborhood?: string
+    priceRange?: string
+    url?: string
     [key: string]: any
   }
   geometry: {
@@ -36,10 +41,12 @@ export default function ChicagoMap() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [geojsonData, setGeojsonData] = useState<GeoJSONData | null>(null)
+  const [studiosData, setStudiosData] = useState<GeoJSONData | null>(null)
   const [visibleCategories, setVisibleCategories] = useState({
     nightclubs: true,
     squatGyms: true,
-    bjj: true
+    bjj: true,
+    studios: true
   })
 
   // Fetch POI data from API
@@ -69,13 +76,35 @@ export default function ChicagoMap() {
     fetchPOIs()
   }, [])
 
+  // Fetch studio apartments from API
+  useEffect(() => {
+    async function fetchStudios() {
+      try {
+        console.log("Fetching studios from API...")
+        const response = await fetch("/api/studios")
+        if (!response.ok) {
+          throw new Error(`Failed to fetch studios: ${response.status}`)
+        }
+
+        const data: GeoJSONData = await response.json()
+        console.log(`Loaded ${data.features.length} studio apartments`)
+        setStudiosData(data)
+      } catch (err) {
+        console.error("Error fetching studios:", err)
+        // Don't set error state - just log it, studios are optional
+      }
+    }
+
+    fetchStudios()
+  }, [])
+
   useEffect(() => {
     if (!mapContainer.current) return
     if (!mapboxgl.accessToken) {
       console.error("Mapbox token missing. Set NEXT_PUBLIC_MAPBOX_TOKEN.")
       return
     }
-    if (!geojsonData) return // wait for data
+    if (!geojsonData || !studiosData) return // wait for both data sets
     if (mapRef.current) return // init once
 
     console.log("Initializing map with data...")
@@ -141,23 +170,56 @@ export default function ChicagoMap() {
         }
       })
 
-      // show popup on point click (works for all three layers)
+      // Add studios source and layer
+      map.addSource("studios", {
+        type: "geojson",
+        data: studiosData
+      })
+
+      // Studios: orange/yellow
+      map.addLayer({
+        id: "studios",
+        type: "circle",
+        source: "studios",
+        filter: ["==", ["get", "category"], "studio"],
+        paint: {
+          "circle-color": "#f77f00",
+          "circle-radius": 8,
+          "circle-stroke-color": "#fff",
+          "circle-stroke-width": 1
+        }
+      })
+
+      // show popup on point click (works for all four layers)
       const showPopup = (e: mapboxgl.MapMouseEvent) => {
         const features = map.queryRenderedFeatures(e.point, {
-          layers: ["nightclub", "squat", "bjj"]
+          layers: ["nightclub", "squat", "bjj", "studios"]
         })
         if (!features.length) return
         const f = features[0]
         const coords = (f.geometry as any).coordinates.slice()
         const props = f.properties || {}
-        const popupHtml = `<strong>${props.name}</strong><p>${props.description || ""}</p><p><em>${props.category}</em></p>`
+
+        let popupHtml = ""
+        if (props.category === "studio") {
+          popupHtml = `
+            <strong>${props.name}</strong>
+            <p><strong>Price:</strong> $${props.price?.toLocaleString() || "N/A"}</p>
+            <p>${props.address || ""}</p>
+            <p><em>${props.neighborhood || ""}</em></p>
+            ${props.url ? `<p><a href="${props.url}" target="_blank">View listing →</a></p>` : ""}
+          `
+        } else {
+          popupHtml = `<strong>${props.name}</strong><p>${props.description || ""}</p><p><em>${props.category}</em></p>`
+        }
+
         new mapboxgl.Popup({ offset: 12 }).setLngLat(coords).setHTML(popupHtml).addTo(map)
       }
 
       map.on("click", showPopup)
 
       // change cursor on hover
-      ;["nightclub", "squat", "bjj"].forEach((layerId) => {
+      ;["nightclub", "squat", "bjj", "studios"].forEach((layerId) => {
         map.on("mouseenter", layerId, () => map.getCanvas().style.cursor = "pointer")
         map.on("mouseleave", layerId, () => map.getCanvas().style.cursor = "")
       })
@@ -169,7 +231,7 @@ export default function ChicagoMap() {
       map.remove()
       mapRef.current = null
     }
-  }, [geojsonData])
+  }, [geojsonData, studiosData])
 
   // Toggle categories by setting layer visibility
   useEffect(() => {
@@ -190,6 +252,11 @@ export default function ChicagoMap() {
       "bjj",
       "visibility",
       visibleCategories.bjj ? "visible" : "none"
+    )
+    map.setLayoutProperty(
+      "studios",
+      "visibility",
+      visibleCategories.studios ? "visible" : "none"
     )
   }, [visibleCategories, mapLoaded])
 
@@ -222,12 +289,13 @@ export default function ChicagoMap() {
     )
   }
 
-  const stats = geojsonData ? {
-    nightclubs: geojsonData.features.filter(f => f.properties.category === "nightclub").length,
-    gyms: geojsonData.features.filter(f => f.properties.category === "squat_gym").length,
-    bjj: geojsonData.features.filter(f => f.properties.category === "bjj").length,
-    total: geojsonData.features.length
-  } : { nightclubs: 0, gyms: 0, bjj: 0, total: 0 }
+  const stats = {
+    nightclubs: geojsonData ? geojsonData.features.filter(f => f.properties.category === "nightclub").length : 0,
+    gyms: geojsonData ? geojsonData.features.filter(f => f.properties.category === "squat_gym").length : 0,
+    bjj: geojsonData ? geojsonData.features.filter(f => f.properties.category === "bjj").length : 0,
+    studios: studiosData ? studiosData.features.length : 0,
+    poiTotal: geojsonData ? geojsonData.features.length : 0
+  }
 
   return (
     <div className={styles.wrapper}>
@@ -236,7 +304,10 @@ export default function ChicagoMap() {
 
         <div className={styles.stats}>
           <p className={styles.statsText}>
-            Showing {stats.total} places from OpenStreetMap
+            {stats.poiTotal} POIs from OpenStreetMap
+          </p>
+          <p className={styles.statsText}>
+            {stats.studios} Studio Apartments
           </p>
         </div>
 
@@ -264,15 +335,24 @@ export default function ChicagoMap() {
           />{" "}
           BJJ Academies ({stats.bjj})
         </label>
+        <label className={styles.filterLabel}>
+          <input
+            type="checkbox"
+            checked={visibleCategories.studios}
+            onChange={(e) => setVisibleCategories(s => ({ ...s, studios: e.target.checked }))}
+          />{" "}
+          Studio Apartments ({stats.studios})
+        </label>
 
         <div className={styles.legend}>
           <div><span className={styles.legendSwatch} style={{background:"#e63946"}}/> Nightclub</div>
           <div><span className={styles.legendSwatch} style={{background:"#2a9d8f"}}/> Gym/Fitness</div>
           <div><span className={styles.legendSwatch} style={{background:"#6a4c93"}}/> BJJ</div>
+          <div><span className={styles.legendSwatch} style={{background:"#f77f00"}}/> Studio Apt</div>
         </div>
 
         <small className={styles.dataSource}>
-          Data source: OpenStreetMap contributors via Overpass API
+          Data sources: OpenStreetMap (POIs) • Apartments.com (Studios)
         </small>
       </div>
 
