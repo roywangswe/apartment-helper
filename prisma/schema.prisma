@@ -64,3 +64,12 @@ model Apartment {
   @@index([neighborhood])
   @@index([city])
 }
+
+model PoiCache {
+  id        String   @id @default(cuid())
+  cacheKey  String   @unique
+  data      Json
+  createdAt DateTime @default(now())
+
+  @@index([cacheKey])
+}

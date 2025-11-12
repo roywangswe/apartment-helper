@@ -1,4 +1,10 @@
 import { NextResponse } from "next/server"
+import { PrismaClient } from "@prisma/client"
+
+const prisma = new PrismaClient()
+
+// Cache TTL in milliseconds (24 hours)
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000
 
 // Downtown Chicago bounding box
 const CHICAGO_BOUNDS = {
@@ -29,10 +35,31 @@ interface OverpassResponse {
 
 export async function GET() {
   try {
-    console.log("Fetching POIs from Overpass API...")
-
     const { south, west, north, east } = CHICAGO_BOUNDS
     const bbox = `${south},${west},${north},${east}`
+
+    // Create cache key from bounding box
+    const cacheKey = `pois:${bbox}`
+
+    // Check cache first
+    console.log("Checking cache for POIs...")
+    const cached = await prisma.poiCache.findUnique({
+      where: { cacheKey }
+    })
+
+    if (cached) {
+      const cacheAge = Date.now() - cached.createdAt.getTime()
+      if (cacheAge < CACHE_TTL_MS) {
+        console.log(`Cache hit! Age: ${Math.round(cacheAge / 1000 / 60)} minutes`)
+        return NextResponse.json(cached.data)
+      } else {
+        console.log(`Cache expired (age: ${Math.round(cacheAge / 1000 / 60 / 60)} hours)`)
+      }
+    } else {
+      console.log("Cache miss")
+    }
+
+    console.log("Fetching POIs from Overpass API...")
 
     // Overpass QL query for nightclubs, gyms, and BJJ
     const query = `
@@ -138,6 +165,20 @@ export async function GET() {
       gyms: features.filter((f) => f?.properties.category === "squat_gym").length,
       bjj: features.filter((f) => f?.properties.category === "bjj").length
     })
+
+    // Store in cache (upsert to handle both new and expired entries)
+    await prisma.poiCache.upsert({
+      where: { cacheKey },
+      create: {
+        cacheKey,
+        data: geojson
+      },
+      update: {
+        data: geojson,
+        createdAt: new Date()
+      }
+    })
+    console.log("POIs cached successfully")
 
     return NextResponse.json(geojson)
   } catch (error) {
