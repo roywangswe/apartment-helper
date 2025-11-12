@@ -204,7 +204,7 @@ export default function ChicagoMap() {
         if (props.category === "studio") {
           popupHtml = `
             <strong>${props.name}</strong>
-            <p><strong>Price:</strong> $${props.price?.toLocaleString() || "N/A"}</p>
+            <p><strong>Price:</strong> ${props.price ? `$${props.price.toLocaleString()}` : "Contact for pricing"}</p>
             <p>${props.address || ""}</p>
             <p><em>${props.neighborhood || ""}</em></p>
             ${props.url ? `<p><a href="${props.url}" target="_blank">View listing →</a></p>` : ""}

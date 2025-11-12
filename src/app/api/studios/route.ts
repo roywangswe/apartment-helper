@@ -36,7 +36,7 @@ export async function GET() {
     // Map to GeoJSON features
     const studiosData = apartments.map((apt) => {
       // Try to find studio-specific pricing from models array
-      let studioPrice = apt.rentMin || 0
+      let studioPrice = apt.rentMin ?? null
       if (apt.models && Array.isArray(apt.models)) {
         const models = apt.models as Array<{
           modelName?: string
