@@ -15,3 +15,52 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model Apartment {
+  id            String   @id
+  propertyName  String
+  url           String
+
+  // Location fields
+  fullAddress   String
+  state         String
+  city          String
+  neighborhood  String
+  postalCode    String
+  streetAddress String
+
+  // Coordinates for mapping
+  latitude      Float
+  longitude     Float
+
+  // Rent info
+  rentMin       Int?
+  rentMax       Int?
+
+  // Unit details
+  beds          String?
+  baths         String?
+  sqft          String?
+
+  // Store complex nested data as JSON
+  models        Json?
+  transitAndPOI Json?
+  scores        Json?
+  amenities     Json?
+  fees          Json?
+  schools       Json?
+  contact       Json?
+  photos        Json?
+
+  description   String?
+  neighborhoodDescription String?
+  isVerified    Boolean  @default(false)
+  scrapedAt     DateTime
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([beds])
+  @@index([neighborhood])
+  @@index([city])
+}
