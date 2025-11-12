@@ -6,12 +6,12 @@ const prisma = new PrismaClient()
 // Cache TTL in milliseconds (24 hours)
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000
 
-// Downtown Chicago bounding box
+// Chicago bounding box (expanded to capture more POIs)
 const CHICAGO_BOUNDS = {
-  south: 41.85,
-  west: -87.68,
-  north: 41.92,
-  east: -87.60
+  south: 41.80,
+  west: -87.75,
+  north: 41.97,
+  east: -87.55
 }
 
 interface OverpassElement {
@@ -75,7 +75,11 @@ export async function GET() {
         node["leisure"="fitness_centre"](${bbox});
         way["leisure"="fitness_centre"](${bbox});
 
-        // BJJ academies
+        // BJJ academies and dojos
+        node["amenity"="dojo"](${bbox});
+        way["amenity"="dojo"](${bbox});
+        node["sport"="martial_arts"](${bbox});
+        way["sport"="martial_arts"](${bbox});
         node["sport"="brazilian_jiu_jitsu"](${bbox});
         way["sport"="brazilian_jiu_jitsu"](${bbox});
         node["sport"="martial_arts"]["martial_arts"="brazilian_jiu_jitsu"](${bbox});
@@ -123,13 +127,15 @@ export async function GET() {
           category = "nightclub"
           description = "Nightclub"
         } else if (
+          tags.amenity === "dojo" ||
+          tags.sport === "martial_arts" ||
           tags.sport === "brazilian_jiu_jitsu" ||
           tags.martial_arts === "brazilian_jiu_jitsu" ||
-          name.match(/bjj|jiu.?jitsu|gracie|grappling/i) ||
+          name.match(/bjj|jiu.?jitsu|gracie|grappling|dojo|martial/i) ||
           (tags.sport && tags.sport.match(/jiu.?jitsu/i))
         ) {
           category = "bjj"
-          description = "Brazilian Jiu-Jitsu Academy"
+          description = tags.amenity === "dojo" ? "Martial Arts Dojo" : "Brazilian Jiu-Jitsu Academy"
         } else if (tags.amenity === "gym" || tags.leisure === "fitness_centre") {
           category = "squat_gym"
           description = tags.sport ? `Gym - ${tags.sport}` : "Fitness Center"
